@@ -1,251 +1,63 @@
 <html>
 <body>
 <p>
-# This is a configuration file for ProGuard.
+<?php
+header('Content-Type: application/json');
 
-# http://proguard.sourceforge.net/index.html#manual/usage.html
+$url = (string) isset($_GET['url']) ? sanitize_str($_GET['url']) : "http://www.solidfiles.com/v/Gv63aV8v5pyeX";
 
--dontusemixedcaseclassnames
+$agent= 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.0.3705; .NET CLR 1.1.4322)';
 
--dontskipnonpubliclibraryclasses
+$url = str_replace('https://', 'http://', $url ); 
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($ch, CURLOPT_VERBOSE, true);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_USERAGENT, $agent);
+curl_setopt($ch, CURLOPT_URL,$url);
+$result=curl_exec($ch);
+curl_close($ch);
 
--verbose
+$return_data = array();
+$return_data['status'] = false;
+$return_data['orgUrl'] = $url;
 
-# Optimization is turned off by default. Dex does not like code run
-
-# through the ProGuard optimize and preverify steps (and performs some
-
-# of these optimizations on its own).
-
--dontoptimize
-
--dontpreverify
-
--repackageclasses ''
-
--allowaccessmodification
-
-# Note that if you want to enable optimization, you cannot just
-
-# include optimization flags in your own project configuration file;
-
-# instead you will need to point to the
-
-# "proguard-android-optimize.txt" file instead of this one from your
-
-# project.properties file.
-
-###############################################################################
-
-# Settings to handle reflection in the code.
-
-###############################################################################
-
-# RemoteViews might need annotations.
-
--keepattributes *Annotation*
-
-# Preserve all fundamental application classes.
-
--keep public class * extends android.app.Activity
-
--keep public class * extends android.app.Application
-
--keep public class * extends android.app.Service
-
--keep public class * extends android.content.BroadcastReceiver
-
--keep public class * extends android.content.ContentProvider
-
-# Preserve all View implementations, their special context constructors, and
-
-# their setters.
-
--keep public class * extends android.view.View {
-
-    public <init>(android.content.Context);
-
-    public <init>(android.content.Context, android.util.AttributeSet);
-
-    public <init>(android.content.Context, android.util.AttributeSet, int);
-
-    public void set*(...);
-
+//echo "<h2>Stream Url</h2>";
+$streamUrl = array();
+preg_match( '/"streamUrl":"([^"]*)"/', $result, $streamUrl ) ;
+// print_r( $streamUrl[1] ) ;
+if(count($streamUrl) > 0 ) {
+    $return_data['status'] = true;
+    $return_data['streamUrl'] = $streamUrl[1];
 }
 
-# Preserve all classes that have special context constructors, and the
+ 
+//echo "<h2>Download Url</h2>";
+$downloadUrl = array();
+preg_match( '/"downloadUrl":"([^"]*)"/i', $result, $downloadUrl ) ;
+//print_r( $downloadUrl[1] ) ;
+if(count($downloadUrl) > 0 ){
+    $return_data['status'] = true;
+    $return_data['downloadUrl'] = $downloadUrl[1];
+} 
 
-# constructors themselves.
+//echo $result;
+echo json_encode($return_data);
 
--keepclasseswithmembers class * {
-
-    public <init>(android.content.Context, android.util.AttributeSet);
-
+function sanitize_str($data,$msg = "message"){
+    $data = filter_var($data, FILTER_SANITIZE_STRING);
+    if($data == "" ) return_fail("bad string!",$msg);
+    return $data;
 }
-
-# Preserve all classes that have special context constructors, and the
-
-# constructors themselves.
-
--keepclasseswithmembers class * {
-
-    public <init>(android.content.Context, android.util.AttributeSet, int);
-
+function return_fail($msg,$data=array()){
+    $return_obj['status'] = false;
+    $return_obj['msg'] = $msg;
+    $return_obj['data'] = $data;
+    //return $return_obj;
+    echo json_encode($return_obj);
+    exit;
 }
-
-# Preserve all possible onClick handlers.
-
--keepclassmembers class * extends android.content.Context {
-
-   public void *(android.view.View);
-
-   public void *(android.view.MenuItem);
-
-}
-
-# Preserve the special fields of all Parcelable implementations.
-
--keepclassmembers class * implements android.os.Parcelable {
-
-    static android.os.Parcelable$Creator CREATOR;
-
-}
-
-# Preserve static fields of inner classes of R classes that might be accessed
-
-# through introspection.
-
--keepclassmembers class **.R {
-
-  public static <fields>;
-
-}
-
-# Preserve annotated Javascript interface methods.
-
--keepclassmembers class * {
-
-    @android.webkit.JavascriptInterface <methods>;
-
-}
-
-# Preserve annotated and generated classes for Dagger.
-
--keepclassmembers,allowobfuscation class * {
-
-    @dagger.** *;
-
-}
-
--keep class **$$ModuleAdapter
-
--keep class **$$InjectAdapter
-
--keep class **$$StaticInjection
-
--if   class **$$ModuleAdapter
-
--keep class <1>
-
--if   class **$$InjectAdapter
-
--keep class <1>
-
--if   class **$$StaticInjection
-
--keep class <1>
-
--keepnames class dagger.Lazy
-
-# Preserve annotated and generated classes for Butterknife.
-
--keep class **$$ViewBinder {
-
-    public static void bind(...);
-
-    public static void unbind(...);
-
-}
-
--if   class **$$ViewBinder
-
--keep class <1>
-
--keep class **_ViewBinding {
-
-    <init>(<1>, android.view.View);
-
-}
-
--if   class **_ViewBinding
-
--keep class <1>
-
-# Preserve fields that are serialized with GSON.
-
-#-keepclassmembers class com.example.SerializedClass1,
-
-#                        com.example.SerializedClass2 {
-
-#    <fields>;
-
-#}
-
--keepclassmembers,allowobfuscation class * {
-
-    @com.google.gson.annotations.SerializedName <fields>;
-
-}
-
--keep,allowobfuscation @interface com.google.gson.annotations.**
-
-# Preserve the required interface from the License Verification Library
-
-# (but don't nag the developer if the library is not used at all).
-
--keep public interface com.android.vending.licensing.ILicensingService
-
--dontnote com.android.vending.licensing.ILicensingService
-
-# The Android Compatibility library references some classes that may not be
-
-# present in all versions of the API, but we know that's ok.
-
--dontwarn android.support.**
-
--dontwarn android.arch.**
-
-# Preserve all native method names and the names of their classes.
-
--keepclasseswithmembernames,includedescriptorclasses class * {
-
-    native <methods>;
-
-}
-
-# Preserve the special static methods that are required in all enumeration
-
-# classes.
-
--keepclassmembers,allowoptimization enum * {
-
-    public static **[] values();
-
-    public static ** valueOf(java.lang.String);
-
-}
-
-# Explicitly preserve all serialization members. The Serializable interface
-
-# is only a marker interface, so it wouldn't save them.
-
-# You can comment this out if your application doesn't use serialization.
-
-# If your code contains serializable classes that have to be backward 
-
-# compatible, please refer to the manual.
-
--keepclassmembers class * implements
+?>
 </p>
 </body>
 </html>
